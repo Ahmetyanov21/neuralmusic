@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NeuralMusic</title>
+    <style>
+        body {
+            background: black;
+            color: white;
+            font-family: monospace;
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+        }
+        .standby-btn {
+            border: 2px solid white;
+            padding: 15px 35px;
+            border-radius: 30px;
+            font-size: 1.8em;
+            cursor: pointer;
+            transition: 0.2s;
+            background: transparent;
+            color: white;
+        }
+        .standby-btn.active {
+            background: white;
+            color: black;
+        }
+        .slider-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.1em;
+        }
+        input[type="range"] {
+            width: 180px;
+        }
+    </style>
+</head>
+<body>
+    <button class="standby-btn" id="standby-btn">Focus</button>
+
+    <!-- Master MUSIC -->
+    <div class="slider-group">
+        <span>MUSIC</span>
+        <input type="range" id="music-slider" min="0" max="100" value="30">
+        <span id="music-value">80%</span>
+    </div>
+
+    <!-- DRONE -->
+    <div class="slider-group">
+        <span>DRONE</span>
+        <input type="range" id="drone-slider" min="0" max="100" value="20">
+        <span id="drone-value">35%</span>
+    </div>
+
+    <!-- HAZE -->
+    <div class="slider-group">
+        <span>HAZE</span>
+        <input type="range" id="haze-slider" min="0" max="100" value="5">
+        <span id="haze-value">15%</span>
+    </div>
+
+    <!-- BELLS -->
+    <div class="slider-group">
+        <span>BELLS</span>
+        <input type="range" id="bells-slider" min="0" max="100" value="1">
+        <span id="bells-value">46%</span>
+    </div>
+
+    <!-- PLUCK -->
+    <div class="slider-group">
+        <span>PLUCK</span>
+        <input type="range" id="pluck-slider" min="0" max="100" value="5">
+        <span id="pluck-value">46%</span>
+    </div>
+
+    <!-- PULSE -->
+    <div class="slider-group">
+        <span>PULSE</span>
+        <input type="range" id="pulse-slider" min="0" max="100" value="15">
+        <span id="pulse-value">50%</span>
+    </div>
+
+    <!-- NOISE -->
+    <div class="slider-group">
+        <span>NOISE</span>
+        <input type="range" id="noise-slider" min="0" max="100" value="20">
+        <span id="noise-value">30%</span>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <script>
+        // === ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ===
+        let isActive = false;
+        const standbyBtn = document.getElementById('standby-btn');
+
+        // Мастер-громкость
+        const masterGain = new Tone.Gain(0.8).toDestination();
+
+        // === DRONE (низкий гул) ===
+        const droneFilter = new Tone.Filter(200, "lowpass").connect(masterGain);
+        const droneOsc = new Tone.Oscillator(55, "sawtooth").connect(droneFilter);
+        droneOsc.volume.value = -Infinity;
+
+        // === NOISE (шум ветра) ===
+        const noiseFilter = new Tone.Filter(600, "lowpass").connect(masterGain);
+        const noiseGen = new Tone.Noise("pink").connect(noiseFilter);
+        noiseGen.volume.value = -Infinity;
+        const noiseLfo = new Tone.LFO(0.08, 400, 800).connect(noiseFilter.frequency);
+
+        // === HAZE (воздушный шелест) ===
+        const hazeFilter = new Tone.Filter(800, "bandpass").connect(masterGain);
+        hazeFilter.Q.value = 0.8;
+        const hazeGen = new Tone.Noise("pink").connect(hazeFilter);
+        hazeGen.volume.value = -Infinity;
+        const hazeLfo = new Tone.LFO(0.06, 600, 1000).connect(hazeFilter.frequency);
+
+        // === PULSE (сердцебиение) ===
+        const pulseSynth = new Tone.MembraneSynth({
+            pitchDecay: 0.03,
+            octaves: 5,
+            oscillator: { type: "sine" },
+            envelope: { attack: 0.001, decay: 0.5, sustain: 0 }
+        }).connect(masterGain);
+        pulseSynth.volume.value = -Infinity;
+        let pulseInterval = null;
+
+        // === BELLS (чистый перезвон) ===
+        const bellFilter = new Tone.Filter(2000, "highpass").connect(masterGain);
+        const bellSynth = new Tone.MetalSynth({
+            frequency: 200,
+            harmonicity: 2.7,
+            resonance: 15,
+            envelope: {
+                attack: 0.003,
+                decay: 0.6
+            }
+        }).connect(bellFilter);
+        bellSynth.volume.value = -Infinity;
+        let bellTimeout;
+
+        function startBells() {
+            function schedule() {
+                const vol = bellSynth.volume.value;
+                if (vol <= -60) {
+                    bellTimeout = setTimeout(schedule, 2000);
+                    return;
+                }
+                // Одиночный звон, частота 700–1100 Гц — самый музыкальный диапазон
+                const freq = 700 + Math.random() * 400;
+                bellSynth.frequency.value = freq;
+                bellSynth.triggerAttackRelease("16n");
+                // Пауза 4–9 секунд между звонами
+                const nextDelay = (4 + Math.random() * 5) * 1000;
+                bellTimeout = setTimeout(schedule, nextDelay);
+            }
+            schedule();
+        }
+
+        // === PLUCK (чистый щипок) ===
+        const pluckFilter = new Tone.Filter(800, "bandpass").connect(masterGain);
+        pluckFilter.Q.value = 4; // узкая полоса для тональности
+        let pluckVolume = 0;
+        let pluckTimeout;
+
+        // === ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ===
+        function percentToDb(percent) {
+            if (percent <= 0) return -Infinity;
+            return Math.round(20 * Math.log10(percent / 100));
+        }
+
+        // Универсальная привязка ползунка
+        function bindSlider(sliderId, displayId, setter) {
+            const slider = document.getElementById(sliderId);
+            const display = document.getElementById(displayId);
+            const update = () => {
+                const raw = parseInt(slider.value);
+                display.textContent = raw + '%';
+                setter(raw);
+            };
+            slider.addEventListener('input', update);
+            update(); // начальная установка
+        }
+
+        // Привязка MUSIC (мастер)
+        bindSlider('music-slider', 'music-value', (raw) => {
+            masterGain.gain.value = raw / 100;
+        });
+
+        // Привязка DRONE
+        bindSlider('drone-slider', 'drone-value', (raw) => {
+            droneOsc.volume.value = percentToDb(raw);
+        });
+
+        // Привязка NOISE
+        bindSlider('noise-slider', 'noise-value', (raw) => {
+            noiseGen.volume.value = percentToDb(raw);
+        });
+
+        // Привязка HAZE
+        bindSlider('haze-slider', 'haze-value', (raw) => {
+            hazeGen.volume.value = percentToDb(raw);
+        });
+
+        // Привязка PULSE
+        bindSlider('pulse-slider', 'pulse-value', (raw) => {
+            pulseSynth.volume.value = percentToDb(raw);
+        });
+
+        // Привязка BELLS
+        bindSlider('bells-slider', 'bells-value', (raw) => {
+            bellSynth.volume.value = percentToDb(raw);
+        });
+
+        // Привязка PLUCK
+        bindSlider('pluck-slider', 'pluck-value', (raw) => {
+            pluckVolume = raw / 100; // сохраняем громкость от 0 до 1
+            // Начальную громкость самого pluckGain установим при первом запуске
+        });
+
+        // === ФУНКЦИИ ЗАПУСКА ЗВУКОВ (вызываются после старта Tone) ===
+        function startAllSources() {
+            droneOsc.start();
+            noiseGen.start();
+            hazeGen.start();
+            noiseLfo.start();
+            hazeLfo.start();
+        }
+
+        // Запуск планировщика PULSE
+        function startPulse() {
+            if (pulseInterval) clearInterval(pulseInterval);
+            pulseInterval = setInterval(() => {
+                // Играем ноту C1 (33 Гц) – более глубокий, солидный удар
+                pulseSynth.triggerAttackRelease("C1", "8n");
+            }, 2000); // интервал 2 секунды
+        }
+
+        // Запуск планировщика PLUCK (чистый щипок)
+        function startPluck() {
+            function triggerPluck() {
+                if (pluckVolume <= 0) return;
+                const now = Tone.now();
+                // Случайная частота тона (200–700 Гц)
+                const freq = 200 + Math.random() * 500;
+                // Устанавливаем центральную частоту фильтра
+                pluckFilter.frequency.setValueAtTime(freq, now);
+                // Короткий шумовой импульс через фильтр
+                const noiseSource = new Tone.Noise("white");
+                const env = new Tone.Gain(0).connect(pluckFilter);
+                noiseSource.connect(env);
+                // Огибающая: быстрая атака, быстрое затухание
+                env.gain.setValueAtTime(0, now);
+                env.gain.linearRampToValueAtTime(pluckVolume * 0.7, now + 0.005);
+                env.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+                noiseSource.start(now);
+                noiseSource.stop(now + 0.3);
+                // Очистка
+                setTimeout(() => {
+                    noiseSource.dispose();
+                    env.dispose();
+                }, 400);
+            }
+
+            function schedule() {
+                if (pluckVolume <= 0) {
+                    pluckTimeout = setTimeout(schedule, 1000);
+                    return;
+                }
+                const count = Math.floor(Math.random() * 4) + 1;
+                for (let i = 0; i < count; i++) {
+                    setTimeout(() => {
+                        triggerPluck();
+                    }, i * 150 + Math.random() * 50);
+                }
+                const nextDelay = (2.5 + Math.random() * 4) * 1000;
+                pluckTimeout = setTimeout(schedule, count * 160 + nextDelay);
+            }
+            schedule();
+        }
+
+        // === КНОПКА STANDBY ===
+        standbyBtn.addEventListener('click', async () => {
+            if (!isActive) {
+                // Первый запуск: стартуем контекст и все источники
+                await Tone.start();
+                startAllSources();
+                startPulse();
+                startBells();
+                startPluck();
+                // Устанавливаем мастер-громкость из ползунка MUSIC
+                const musicSlider = document.getElementById('music-slider');
+                masterGain.gain.value = parseInt(musicSlider.value) / 100;
+                standbyBtn.textContent = 'ON';
+                standbyBtn.classList.add('active');
+                isActive = true;
+            } else {
+                // Выключаем звук
+                masterGain.gain.value = 0;
+                standbyBtn.textContent = 'Focus';
+                standbyBtn.classList.remove('active');
+                isActive = false;
+            }
+        });
+    </script>
+</body>
+</html>
