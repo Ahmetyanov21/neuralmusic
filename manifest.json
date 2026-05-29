@@ -1,0 +1,8 @@
+{
+  "name": "NeuralMusic",
+  "short_name": "NeuralMusic",
+  "start_url": "/neuralmusic/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#000000"
+}
