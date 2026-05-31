@@ -72,13 +72,6 @@
         <span id="haze-value">15%</span>
     </div>
 
-    <!-- BELLS -->
-    <div class="slider-group">
-        <span>BELLS</span>
-        <input type="range" id="bells-slider" min="0" max="100" value="1">
-        <span id="bells-value">46%</span>
-    </div>
-
     <!-- PLUCK -->
     <div class="slider-group">
         <span>PLUCK</span>
@@ -137,37 +130,6 @@
         pulseSynth.volume.value = -Infinity;
         let pulseInterval = null;
 
-        // === BELLS (чистый перезвон) ===
-        const bellFilter = new Tone.Filter(2000, "highpass").connect(masterGain);
-        const bellSynth = new Tone.MetalSynth({
-            frequency: 200,
-            harmonicity: 2.7,
-            resonance: 15,
-            envelope: {
-                attack: 0.003,
-                decay: 0.6
-            }
-        }).connect(bellFilter);
-        bellSynth.volume.value = -Infinity;
-        let bellTimeout;
-
-        function startBells() {
-            function schedule() {
-                const vol = bellSynth.volume.value;
-                if (vol <= -60) {
-                    bellTimeout = setTimeout(schedule, 2000);
-                    return;
-                }
-                // Одиночный звон, частота 700–1100 Гц — самый музыкальный диапазон
-                const freq = 700 + Math.random() * 400;
-                bellSynth.frequency.value = freq;
-                bellSynth.triggerAttackRelease("16n");
-                // Пауза 4–9 секунд между звонами
-                const nextDelay = (4 + Math.random() * 5) * 1000;
-                bellTimeout = setTimeout(schedule, nextDelay);
-            }
-            schedule();
-        }
 
         // === PLUCK (чистый щипок) ===
         const pluckFilter = new Tone.Filter(800, "bandpass").connect(masterGain);
@@ -217,11 +179,6 @@
         // Привязка PULSE
         bindSlider('pulse-slider', 'pulse-value', (raw) => {
             pulseSynth.volume.value = percentToDb(raw);
-        });
-
-        // Привязка BELLS
-        bindSlider('bells-slider', 'bells-value', (raw) => {
-            bellSynth.volume.value = percentToDb(raw);
         });
 
         // Привязка PLUCK
@@ -298,7 +255,6 @@
                 await Tone.start();
                 startAllSources();
                 startPulse();
-                startBells();
                 startPluck();
                 // Устанавливаем мастер-громкость из ползунка MUSIC
                 const musicSlider = document.getElementById('music-slider');
