@@ -46,6 +46,120 @@
         input[type="range"] {
             width: 180px;
         }
+
+        .timer-block {
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 20px;
+            width: 300px;
+            text-align: center;
+            margin-top: 20px;
+            background: rgba(10, 8, 22, 0.7);
+        }
+        .timer-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            font-size: 0.9em;
+            letter-spacing: 0.1em;
+        }
+        .timer-mode {
+            font-weight: bold;
+        }
+        
+        #timer-mode-btn {
+            background: none;
+            border: none;
+            font-family: monospace;
+            font-size: 0.9em;
+            font-weight: bold;
+            letter-spacing: 0.1em;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+        #timer-mode-btn:hover {
+            background: rgba(255,255,255,0.08);
+        }
+        .timer-mode.working {
+            color: #4caf50; /* зелёный */
+        }
+        .timer-mode.relaxing {
+            color: #2196F3; /* синий */
+        }
+        .timer-display {
+            font-size: 3em;
+            font-family: monospace;
+            margin: 15px 0;
+        }
+        .timer-presets {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 15px;
+        }
+        .timer-preset {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-family: monospace;
+            transition: all 0.2s;
+        }
+        .timer-custom {
+            margin: 10px 0 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            font-size: 0.95em;
+        }
+        .timer-custom label {
+            color: rgba(255,255,255,0.7);
+        }
+        #timer-custom-input {
+            width: 60px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: white;
+            padding: 5px 8px;
+            border-radius: 4px;
+            font-family: monospace;
+            text-align: center;
+            outline: none;
+        }
+        #timer-custom-input:focus {
+            border-color: rgba(255,255,255,0.5);
+        }
+        .timer-preset.active {
+            background: rgba(255,255,255,0.15);
+            border-color: rgba(255,255,255,0.5);
+            color: #fff;
+        }
+        .timer-start-btn {
+            width: 100%;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white;
+            padding: 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: monospace;
+            font-size: 1.1em;
+            letter-spacing: 0.1em;
+            transition: all 0.2s;
+        }
+        .timer-start-btn:hover {
+            background: rgba(255,255,255,0.15);
+        }
+        .timer-start-btn.pause {
+            border-color: #ff9800;
+            color: #ff9800;
+        }
     </style>
 </head>
 <body>
@@ -93,6 +207,27 @@
         <span id="noise-value">30%</span>
     </div>
 
+    <!-- TIMER BLOCK -->
+    <div class="timer-block">
+        <div class="timer-header">
+            <span>TIMER</span>
+            <button id="timer-mode-btn" class="timer-mode working">⇆ Working</button>
+        </div>
+        <div class="timer-display" id="timer-display">25:00</div>
+        <div class="timer-presets">
+            <button class="timer-preset" data-minutes="10">10m</button>
+            <button class="timer-preset" data-minutes="30">30m</button>
+            <button class="timer-preset active" data-minutes="45">45m</button>
+            <button class="timer-preset" data-minutes="60">60m</button>
+            <button class="timer-preset" data-minutes="90">90m</button>
+        </div>
+        <div class="timer-custom">
+            <label for="timer-custom-input">Time:</label>
+            <input type="number" id="timer-custom-input" min="1" max="240" value="45" step="1"> мин
+        </div>
+        <button class="timer-start-btn" id="timer-start-btn">Start</button>
+    </div>    
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
     <script>
         // === ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ===
@@ -101,6 +236,7 @@
 
         // Мастер-громкость
         const masterGain = new Tone.Gain(0.8).toDestination();
+        const timerReverb = new Tone.Reverb(2.5).toDestination(); // время реверберации 2.5 сек
 
         // === DRONE (низкий гул) ===
         const droneFilter = new Tone.Filter(200, "lowpass").connect(masterGain);
@@ -247,6 +383,204 @@
             }
             schedule();
         }
+
+        // === TIMER LOGIC ===
+        const timerDisplay = document.getElementById('timer-display');
+        const timerModeBtn = document.getElementById('timer-mode-btn');
+        const startBtn = document.getElementById('timer-start-btn');
+        const presetBtns = document.querySelectorAll('.timer-preset');
+        const customInput = document.getElementById('timer-custom-input');
+
+        let totalSeconds = 45 * 60; // по умолчанию 45 минут
+        let remainingSeconds = totalSeconds;
+        let timerInterval = null;
+        let isTimerRunning = false;
+        let currentMode = 'working'; // 'working' или 'relaxing'
+
+        // Звук окончания работы (C-E-G мажор)
+        function playWorkEndChime() {
+            const now = Tone.now();
+            // FM-синтез для хрустального колокольчика
+            const synth = new Tone.FMSynth({
+                harmonicity: 3.0,        // соотношение частот для "звона"
+                modulationIndex: 5,      // интенсивность тембра
+                oscillator: { type: "sine" },
+                envelope: {
+                    attack: 0.001,
+                    decay: 0.8,
+                    sustain: 0,
+                    release: 0.1
+                },
+                modulation: { type: "sine" },
+                modulationEnvelope: {
+                    attack: 0.001,
+                    decay: 0.3,
+                    sustain: 0,
+                    release: 0.1
+                }
+            }).connect(timerReverb); // подключаем к ревербератору
+
+            // Играем две ноты подряд: E5 и C5 — короткая приятная мелодия
+            synth.triggerAttackRelease("E5", "16n", now);
+            synth.triggerAttackRelease("C5", "16n", now + 0.15);
+            
+            // Освобождаем через 1.5 секунды
+            setTimeout(() => synth.dispose(), 1500);
+        }
+
+        // Звук окончания отдыха (A-C-E, мягкий минор)
+        function playRelaxEndChime() {
+            const now = Tone.now();
+            // Мягкий синтезатор с пилообразной волной и сильным фильтром
+            const filter = new Tone.Filter(300, "lowpass"); // пропускаем только низкие частоты
+            const synth = new Tone.Synth({
+                oscillator: { type: "sawtooth" }, // насыщенная волна
+                envelope: {
+                    attack: 0.02,
+                    decay: 0.4,
+                    sustain: 0.1,
+                    release: 1.2
+                }
+            }).connect(filter);
+            filter.connect(timerReverb); // подключаем фильтр к ревербератору
+
+            // Играем ноту G3 — низкий, тёплый и глубокий звук
+            synth.triggerAttackRelease("G3", "4n", now);
+            
+            // Освобождаем через 2 секунды
+            setTimeout(() => {
+                synth.dispose();
+                filter.dispose();
+            }, 2000);
+        }
+        
+        // Обновление дисплея MM:SS
+        function updateTimerDisplay() {
+            const mins = Math.floor(remainingSeconds / 60).toString().padStart(2, '0');
+            const secs = (remainingSeconds % 60).toString().padStart(2, '0');
+            timerDisplay.textContent = `${mins}:${secs}`;
+        }
+
+        // Сброс таймера (остановка, обновление дисплея)
+        function resetTimer(keepMode = false) {
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+            isTimerRunning = false;
+            startBtn.textContent = 'Start';
+            startBtn.classList.remove('pause');
+            remainingSeconds = totalSeconds;
+            updateTimerDisplay();
+            if (!keepMode) {
+                currentMode = 'working';
+                timerModeBth.textContent = '⇆ Working';
+                timerModeBtn.className = 'timer-mode working';
+            }
+        }
+
+        // Установка времени из разных источников
+        function setTotalTime(minutes) {
+            totalSeconds = minutes * 60;
+            // Синхронизируем поле ввода с выбранным значением
+            customInput.value = minutes;
+        }
+
+        // Выбор пресета
+        presetBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                // Убираем active у всех, ставим на текущую
+                presetBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                const minutes = parseInt(btn.dataset.minutes);
+                setTotalTime(minutes);
+                resetTimer(true); // сбрасываем, но сохраняем режим
+            });
+        });
+
+        // Ручной ввод
+        customInput.addEventListener('input', () => {
+            const val = parseInt(customInput.value);
+            if (!isNaN(val) && val > 0) {
+                // Снимаем выделение с кнопок пресетов
+                presetBtns.forEach(b => b.classList.remove('active'));
+                setTotalTime(val);
+                resetTimer(true);
+            }
+        });
+
+        // Старт / Пауза
+        startBtn.addEventListener('click', () => {
+            if (isTimerRunning) {
+                // Пауза
+                clearInterval(timerInterval);
+                timerInterval = null;
+                isTimerRunning = false;
+                startBtn.textContent = 'Start';
+                startBtn.classList.remove('pause');
+            } else {
+                // Запуск
+                if (remainingSeconds <= 0) {
+                    // Если время истекло, сбрасываем на выбранный пресет
+                    remainingSeconds = totalSeconds;
+                    updateTimerDisplay();
+                }
+                isTimerRunning = true;
+                startBtn.textContent = 'Pause';
+                startBtn.classList.add('pause');
+                timerInterval = setInterval(() => {
+                    if (remainingSeconds <= 0) {
+                        // Время вышло
+                        clearInterval(timerInterval);
+                        timerInterval = null;
+                        isTimerRunning = false;
+                        startBtn.textContent = 'Start';
+                        startBtn.classList.remove('pause');
+                        // Проигрываем нужный звук в зависимости от текущего режима
+                        if (currentMode === 'working') {
+                            playWorkEndChime();
+                        } else {
+                            playRelaxEndChime();
+                        }
+                        // Переключаем режим
+                        if (currentMode === 'working') {
+                            currentMode = 'relaxing';
+                            timerModeBtn.textContent = '⇆ Relaxing';
+                            timerModeBtn.className = 'timer-mode relaxing';
+                        } else {
+                            currentMode = 'working';
+                            timerModeBtn.textContent = '⇆ Working';
+                            timerModeBtn.className = 'timer-mode working';
+                        }
+                        // Сбросим таймер на текущее выбранное время (для следующего запуска)
+                        remainingSeconds = totalSeconds;
+                        updateTimerDisplay();
+                        return;
+                    }
+                    remainingSeconds--;
+                    updateTimerDisplay();
+                }, 1000);
+            }
+        });
+
+        // Ручное переключение режима
+        timerModeBtn.addEventListener('click', () => {
+            if (currentMode === 'working') {
+                currentMode = 'relaxing';
+                timerModeBtn.textContent = '⇆ Relaxing';
+                timerModeBtn.className = 'timer-mode relaxing';
+            } else {
+                currentMode = 'working';
+                timerModeBtn.textContent = '⇆ Working';
+                timerModeBtn.className = 'timer-mode working';
+            }
+            // Таймер не сбрасываем, время не меняем.
+        });
+
+        // Инициализация: выставим 45 минут по умолчанию и синхронизируем поле ввода
+        setTotalTime(45);
+        updateTimerDisplay();
+        customInput.value = 45;
 
         // === КНОПКА STANDBY ===
         standbyBtn.addEventListener('click', async () => {
