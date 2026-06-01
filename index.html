@@ -55,6 +55,7 @@
             text-align: center;
             margin-top: 20px;
             background: rgba(10, 8, 22, 0.7);
+            position: relative; /* вот это добавь */
         }
         .timer-header {
             display: flex;
@@ -160,51 +161,181 @@
             border-color: #ff9800;
             color: #ff9800;
         }
+                /* Фиксированная кнопка History справа */
+        .history-btn-fixed {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.25);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-family: monospace;
+            font-size: 0.85em;
+            letter-spacing: 0.05em;
+            z-index: 20;
+            transition: background 0.2s;
+        }
+        .history-btn-fixed:hover {
+            background: rgba(255,255,255,0.12);
+        }
+
+        /* Панель истории (правая боковая) */
+        .history-panel {
+            position: fixed;
+            top: 0; right: 0;
+            width: 280px;
+            height: 100%;
+            background: rgba(10, 8, 22, 0.96);
+            border-left: 1px solid rgba(255,255,255,0.15);
+            backdrop-filter: blur(10px);
+            z-index: 30;
+            display: none; /* скрыта по умолчанию */
+            flex-direction: column;
+            padding: 20px;
+            box-shadow: -5px 0 20px rgba(0,0,0,0.5);
+            overflow-y: auto;
+        }
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            font-family: monospace;
+            letter-spacing: 0.1em;
+            font-size: 0.9em;
+        }
+        .history-close {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.2em;
+            cursor: pointer;
+        }
+        .history-list {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .history-entry {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-family: monospace;
+            font-size: 0.8em;
+            padding: 6px 8px;
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 4px;
+        }
+        .history-entry.work {
+            border-left: 3px solid #4caf50;
+        }
+        .history-entry.relax {
+            border-left: 3px solid #2196F3;
+        }
+        .history-time {
+            opacity: 0.7;
+        }
+        .history-duration {
+            font-weight: bold;
+        }
+        .timer-stats {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            margin: 10px 0 12px;
+            font-size: 0.85em;
+            color: rgba(255, 255, 255, 0.7);
+            position: relative;
+            width: 100%;
+        }
+        .reset-stats-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: rgba(255,255,255,0.7);
+            font-size: 0.75em;
+            cursor: pointer;
+            border-radius: 50%;
+            width: 18px;
+            height: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            line-height: 1;
+            transition: background 0.2s, color 0.2s;
+        }
+        .reset-stats-btn:hover {
+            background: rgba(255,255,255,0.15);
+            color: white;
+        }
+
+
+        .stat {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+        }
+        .stat-label {
+            font-size: 0.7em;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            opacity: 0.6;
+        }
     </style>
 </head>
 <body>
+    <button class="history-btn-fixed" id="history-btn-fixed">History ▸</button>
     <button class="standby-btn" id="standby-btn">Focus</button>
 
     <!-- Master MUSIC -->
     <div class="slider-group">
         <span>MUSIC</span>
         <input type="range" id="music-slider" min="0" max="100" value="30">
-        <span id="music-value">80%</span>
+        <span id="music-value">30%</span>
     </div>
 
     <!-- DRONE -->
     <div class="slider-group">
         <span>DRONE</span>
         <input type="range" id="drone-slider" min="0" max="100" value="20">
-        <span id="drone-value">35%</span>
+        <span id="drone-value">20%</span>
     </div>
 
     <!-- HAZE -->
     <div class="slider-group">
         <span>HAZE</span>
         <input type="range" id="haze-slider" min="0" max="100" value="5">
-        <span id="haze-value">15%</span>
+        <span id="haze-value">5%</span>
     </div>
 
     <!-- PLUCK -->
     <div class="slider-group">
         <span>PLUCK</span>
         <input type="range" id="pluck-slider" min="0" max="100" value="5">
-        <span id="pluck-value">46%</span>
+        <span id="pluck-value">5%</span>
     </div>
 
     <!-- PULSE -->
     <div class="slider-group">
         <span>PULSE</span>
         <input type="range" id="pulse-slider" min="0" max="100" value="15">
-        <span id="pulse-value">50%</span>
+        <span id="pulse-value">15%</span>
     </div>
 
     <!-- NOISE -->
     <div class="slider-group">
         <span>NOISE</span>
         <input type="range" id="noise-slider" min="0" max="100" value="20">
-        <span id="noise-value">30%</span>
+        <span id="noise-value">20%</span>
     </div>
 
     <!-- TIMER BLOCK -->
@@ -213,7 +344,13 @@
             <span>TIMER</span>
             <button id="timer-mode-btn" class="timer-mode working">⇆ Working</button>
         </div>
-        <div class="timer-display" id="timer-display">25:00</div>
+        <div class="timer-display" id="timer-display">45:00</div>
+                
+        <div class="timer-stats" id="timer-stats">
+            <div class="stat"><span class="stat-label">Work</span> <span id="work-stat">00:00</span></div>
+            <div class="stat"><span class="stat-label">Relax</span> <span id="relax-stat">00:00</span></div>
+        </div>
+            <button class="reset-stats-btn" id="reset-stats-btn" title="Сбросить дневную статистику">↺</button>
         <div class="timer-presets">
             <button class="timer-preset" data-minutes="10">10m</button>
             <button class="timer-preset" data-minutes="30">30m</button>
@@ -229,6 +366,17 @@
     </div>    
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+
+    <!-- HISTORY PANEL -->
+    <div class="history-panel" id="history-panel">
+        <div class="history-header">
+            <span>SESSION HISTORY</span>
+            <button class="history-close" id="history-close">✕</button>
+        </div>
+        <div class="history-list" id="history-list">
+            <!-- Записи будут добавляться динамически -->
+        </div>
+    </div>
     <script>
         // === ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ===
         let isActive = false;
@@ -396,6 +544,49 @@
         let timerInterval = null;
         let isTimerRunning = false;
         let currentMode = 'working'; // 'working' или 'relaxing'
+        let sessionHistory = []; // массив завершённых циклов {mode, durationSec, timestamp}
+        let totalWorkSeconds = 0;   // для нижней статистики (уже есть отображение)
+        let totalRelaxSeconds = 0;
+                // === СОХРАНЕНИЕ И ЗАГРУЗКА ДНЕВНОЙ СТАТИСТИКИ ===
+        const STORAGE_KEY = 'neuralmusic_daily';
+
+        function saveDailyData() {
+            const data = {
+                date: new Date().toISOString().split('T')[0], // ГГГГ-ММ-ДД
+                totalWorkSeconds: totalWorkSeconds,
+                totalRelaxSeconds: totalRelaxSeconds,
+                sessionHistory: sessionHistory
+            };
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        }
+
+        function loadDailyData() {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if (!saved) return;
+            try {
+                const data = JSON.parse(saved);
+                const today = new Date().toISOString().split('T')[0];
+                if (data.date === today) {
+                    totalWorkSeconds = data.totalWorkSeconds || 0;
+                    totalRelaxSeconds = data.totalRelaxSeconds || 0;
+                    sessionHistory = data.sessionHistory || [];
+                    // Обновим отображение статистики и истории
+                    document.getElementById('work-stat').textContent = 
+                        `${Math.floor(totalWorkSeconds / 60).toString().padStart(2, '0')}:${(totalWorkSeconds % 60).toString().padStart(2, '0')}`;
+                    document.getElementById('relax-stat').textContent = 
+                        `${Math.floor(totalRelaxSeconds / 60).toString().padStart(2, '0')}:${(totalRelaxSeconds % 60).toString().padStart(2, '0')}`;
+                        
+                    renderHistory();
+                } else {
+                    // Новый день – очищаем сохранённое
+                    localStorage.removeItem(STORAGE_KEY);
+                }
+            } catch (e) {
+                localStorage.removeItem(STORAGE_KEY);
+            }
+        }
+
+        loadDailyData();
 
         // Звук окончания работы (C-E-G мажор)
         function playWorkEndChime() {
@@ -460,6 +651,34 @@
             const secs = (remainingSeconds % 60).toString().padStart(2, '0');
             timerDisplay.textContent = `${mins}:${secs}`;
         }
+        // Добавление записи в историю и обновление панели
+        function addHistoryEntry(mode, durationSec) {
+            const entry = {
+                mode: mode,
+                durationSec: durationSec,
+                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            };
+            sessionHistory.push(entry);
+            renderHistory();
+        }
+
+        function renderHistory() {
+            const list = document.getElementById('history-list');
+            if (!list) return;
+            list.innerHTML = '';
+            // Показываем последние сверху
+            [...sessionHistory].reverse().forEach(entry => {
+                const div = document.createElement('div');
+                div.className = `history-entry ${entry.mode === 'working' ? 'work' : 'relax'}`;
+                const mins = Math.floor(entry.durationSec / 60);
+                const secs = entry.durationSec % 60;
+                const durStr = mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
+                div.innerHTML = `<span class="history-time">${entry.timestamp}</span>
+                                 <span class="history-mode">${entry.mode === 'working' ? 'Work' : 'Relax'}</span>
+                                 <span class="history-duration">${durStr}</span>`;
+                list.appendChild(div);
+            });
+        }
 
         // Сброс таймера (остановка, обновление дисплея)
         function resetTimer(keepMode = false) {
@@ -474,7 +693,7 @@
             updateTimerDisplay();
             if (!keepMode) {
                 currentMode = 'working';
-                timerModeBth.textContent = '⇆ Working';
+                timerModeBtn.textContent = '⇆ Working';
                 timerModeBtn.className = 'timer-mode working';
             }
         }
@@ -542,6 +761,9 @@
                         } else {
                             playRelaxEndChime();
                         }
+                        addHistoryEntry(currentMode, totalSeconds);
+                        saveDailyData(); // сохраняем дневную статистику в localStorage
+
                         // Переключаем режим
                         if (currentMode === 'working') {
                             currentMode = 'relaxing';
@@ -557,6 +779,20 @@
                         updateTimerDisplay();
                         return;
                     }
+                    // Увеличиваем общее время активного режима
+                    if (currentMode === 'working') {
+                        totalWorkSeconds++;
+                    } else {
+                        totalRelaxSeconds++;
+                    }
+                    // Обновляем отображение статистики под таймером
+                    document.getElementById('work-stat').textContent = 
+                        `${Math.floor(totalWorkSeconds / 60).toString().padStart(2, '0')}:${(totalWorkSeconds % 60).toString().padStart(2, '0')}`;
+                    document.getElementById('relax-stat').textContent = 
+                        `${Math.floor(totalRelaxSeconds / 60).toString().padStart(2, '0')}:${(totalRelaxSeconds % 60).toString().padStart(2, '0')}`;
+                    
+                        saveDailyData(); // сохраняем текущую статистику
+
                     remainingSeconds--;
                     updateTimerDisplay();
                 }, 1000);
@@ -580,7 +816,29 @@
         // Инициализация: выставим 45 минут по умолчанию и синхронизируем поле ввода
         setTotalTime(45);
         updateTimerDisplay();
-        customInput.value = 45;
+
+        // Обработчики панели истории
+        const historyBtnFixed = document.getElementById('history-btn-fixed');
+        const historyPanel = document.getElementById('history-panel');
+        const historyClose = document.getElementById('history-close');
+        const resetStatsBtn = document.getElementById('reset-stats-btn');
+
+        historyBtnFixed.addEventListener('click', () => {
+            historyPanel.style.display = 'flex';
+        });
+        historyClose.addEventListener('click', () => {
+            historyPanel.style.display = 'none';
+        });
+
+        resetStatsBtn.addEventListener('click', () => {
+            totalWorkSeconds = 0;
+            totalRelaxSeconds = 0;
+            sessionHistory = [];
+            document.getElementById('work-stat').textContent = '00:00';
+            document.getElementById('relax-stat').textContent = '00:00';
+            renderHistory();
+            saveDailyData();
+        });
 
         // === КНОПКА STANDBY ===
         standbyBtn.addEventListener('click', async () => {
