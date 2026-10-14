@@ -1,0 +1,15 @@
+.DS_Store
+Thumbs.db
+*.log
+node_modules/
+dist/
+.claude/
+.idea/
+.vscode/
+*.apk
+*.aab
+*.jks
+*.keystore
+keystore.properties
+local.properties
+.env

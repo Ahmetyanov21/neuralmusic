@@ -1,0 +1,34 @@
+{
+  "name": "neuralmusic",
+  "version": "1.0.0",
+  "description": "Генеративный эмбиент-плеер с Pomodoro-таймером для фокуса",
+  "main": "main.js",
+  "author": "Ilnur Akhmetyanov",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder"
+  },
+  "devDependencies": {
+    "electron": "^32.3.3",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.ahmetyanov.neuralmusic",
+    "productName": "NeuralMusic",
+    "files": [
+      "main.js",
+      "preload.js",
+      "web/**"
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  }
+}

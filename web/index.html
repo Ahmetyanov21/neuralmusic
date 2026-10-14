@@ -1,0 +1,1234 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NeuralMusic — Focus Studio</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='45' fill='%230a0816' stroke='%237ad0ff' stroke-width='6'/%3E%3Ccircle cx='50' cy='50' r='18' fill='%237ad0ff'/%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="icon.svg">
+<link rel="manifest" href="manifest.json">
+<script>
+if ('serviceWorker' in navigator){
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('service-worker.js').catch(() => {});
+    });
+}
+</script>
+<style>
+:root{
+    --bg-0:#05040a;
+    --bg-1:#0c0a1a;
+    --panel:rgba(255,255,255,0.04);
+    --panel-border:rgba(255,255,255,0.09);
+    --text:#eef0ff;
+    --text-dim:rgba(238,240,255,0.55);
+    --text-faint:rgba(238,240,255,0.32);
+    --accent-music:#8ef0c0;
+    --accent-drone:#a78bfa;
+    --accent-haze:#7ad0ff;
+    --accent-pulse:#ff7a90;
+    --accent-noise:#9fb3c8;
+    --work:#4caf50;
+    --relax:#2196f3;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;}
+body{
+    min-height:100vh;
+    background:linear-gradient(160deg, var(--bg-1), var(--bg-0));
+    color:var(--text);
+    font-family:'SF Mono', 'Consolas', 'Menlo', monospace;
+    display:flex;
+    justify-content:center;
+    padding:32px 16px 64px;
+    position:relative;
+}
+.aurora{
+    position:fixed;
+    inset:0;
+    overflow:hidden;
+    z-index:-1;
+    filter:blur(70px);
+    opacity:0.5;
+    transition:opacity 1.4s ease;
+    pointer-events:none;
+}
+body.focus-active .aurora{opacity:0.85;}
+.aurora span{
+    position:absolute;
+    width:62vmax;
+    height:62vmax;
+    border-radius:50%;
+    mix-blend-mode:screen;
+}
+.aurora span:nth-child(1){
+    background:radial-gradient(circle, rgba(122,208,255,0.55), transparent 70%);
+    top:-22%; left:-12%;
+    animation:drift1 28s ease-in-out infinite alternate;
+}
+.aurora span:nth-child(2){
+    background:radial-gradient(circle, rgba(167,139,250,0.5), transparent 70%);
+    top:28%; right:-22%;
+    animation:drift2 34s ease-in-out infinite alternate;
+}
+.aurora span:nth-child(3){
+    background:radial-gradient(circle, rgba(255,122,144,0.4), transparent 70%);
+    bottom:-28%; left:22%;
+    animation:drift3 40s ease-in-out infinite alternate;
+}
+@keyframes drift1{0%{transform:translate(0,0) scale(1);}100%{transform:translate(10vw,8vh) scale(1.15);}}
+@keyframes drift2{0%{transform:translate(0,0) scale(1);}100%{transform:translate(-9vw,10vh) scale(1.1);}}
+@keyframes drift3{0%{transform:translate(0,0) scale(1);}100%{transform:translate(6vw,-9vh) scale(1.2);}}
+@media (hover:none) and (pointer:coarse){
+    .aurora{filter:blur(28px);}
+    .aurora span{animation:none !important;}
+}
+.app{
+    width:100%;
+    max-width:1080px;
+    display:flex;
+    flex-direction:column;
+    gap:28px;
+}
+.topbar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+}
+.brand{
+    font-weight:700;
+    letter-spacing:0.28em;
+    font-size:0.95em;
+    color:var(--text);
+}
+.brand span{color:var(--accent-haze);}
+.icon-btn{
+    background:var(--panel);
+    border:1px solid var(--panel-border);
+    color:var(--text);
+    padding:9px 16px;
+    border-radius:8px;
+    cursor:pointer;
+    font-family:inherit;
+    font-size:0.82em;
+    letter-spacing:0.05em;
+    transition:background 0.2s, border-color 0.2s;
+}
+.icon-btn:hover{background:rgba(255,255,255,0.09); border-color:rgba(255,255,255,0.2);}
+
+.layout{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:28px;
+}
+@media(min-width:820px){
+    .layout{grid-template-columns:300px 1fr;}
+}
+
+.card{
+    background:var(--panel);
+    border:1px solid var(--panel-border);
+    border-radius:18px;
+    padding:22px 24px;
+    backdrop-filter:blur(14px);
+}
+.card h2{
+    margin:0 0 16px;
+    font-size:0.78em;
+    letter-spacing:0.18em;
+    color:var(--text-faint);
+    font-weight:600;
+}
+
+/* ===== FOCUS SECTION ===== */
+.focus-col{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:20px;
+}
+.focus-ring-wrap{
+    position:relative;
+    width:180px;
+    height:180px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+}
+.standby-btn{
+    position:relative;
+    z-index:2;
+    width:140px;
+    height:140px;
+    border-radius:50%;
+    border:2px solid rgba(255,255,255,0.25);
+    background:rgba(10,8,20,0.6);
+    color:var(--text);
+    font-family:inherit;
+    font-size:1.05em;
+    letter-spacing:0.12em;
+    font-weight:700;
+    cursor:pointer;
+    transition:all 0.35s ease;
+}
+.standby-btn:hover{border-color:rgba(255,255,255,0.5);}
+.standby-btn.active{
+    background:radial-gradient(circle, #cfe9ff, #7ad0ff);
+    color:#04121c;
+    border-color:#7ad0ff;
+    box-shadow:0 0 55px rgba(122,208,255,0.6);
+    animation:breathe 3.2s ease-in-out infinite;
+}
+@keyframes breathe{
+    0%,100%{transform:scale(1);}
+    50%{transform:scale(1.035);}
+}
+.hint{font-size:0.72em; color:var(--text-faint); letter-spacing:0.05em;}
+
+.presets-row{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    justify-content:center;
+}
+.preset-chip{
+    background:rgba(255,255,255,0.05);
+    border:1px solid var(--panel-border);
+    color:var(--text-dim);
+    padding:7px 14px;
+    border-radius:20px;
+    font-family:inherit;
+    font-size:0.75em;
+    letter-spacing:0.03em;
+    cursor:pointer;
+    transition:all 0.2s;
+}
+.preset-chip:hover{border-color:rgba(255,255,255,0.4); color:var(--text);}
+
+/* ===== MIXER ===== */
+.slider-group{
+    display:grid;
+    grid-template-columns:64px 1fr 46px;
+    align-items:center;
+    gap:12px;
+    margin-bottom:14px;
+    --fill:50%;
+}
+.slider-group:last-child{margin-bottom:0;}
+.slider-label{
+    font-size:0.78em;
+    letter-spacing:0.08em;
+    color:var(--accent);
+    font-weight:700;
+}
+.slider-value{font-size:0.78em; color:var(--text-dim); text-align:right;}
+input[type="range"]{
+    -webkit-appearance:none;
+    appearance:none;
+    height:5px;
+    border-radius:3px;
+    background:linear-gradient(to right, var(--accent) var(--fill), rgba(255,255,255,0.08) var(--fill));
+    outline:none;
+}
+input[type="range"]::-webkit-slider-thumb{
+    -webkit-appearance:none;
+    width:16px; height:16px;
+    border-radius:50%;
+    background:var(--accent);
+    box-shadow:0 0 8px rgba(0,0,0,0.4);
+    cursor:pointer;
+    border:2px solid rgba(0,0,0,0.35);
+}
+input[type="range"]::-moz-range-thumb{
+    width:16px; height:16px;
+    border-radius:50%;
+    background:var(--accent);
+    border:2px solid rgba(0,0,0,0.35);
+    cursor:pointer;
+}
+
+/* ===== TIMER ===== */
+.timer-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:14px;
+}
+.timer-header span{font-size:0.78em; letter-spacing:0.15em; color:var(--text-faint);}
+#timer-mode-btn{
+    background:none;
+    border:1px solid transparent;
+    font-family:inherit;
+    font-size:0.82em;
+    font-weight:700;
+    letter-spacing:0.08em;
+    cursor:pointer;
+    padding:5px 10px;
+    border-radius:6px;
+    transition:background 0.2s;
+}
+#timer-mode-btn:hover{background:rgba(255,255,255,0.08);}
+.timer-mode.working{color:var(--work);}
+.timer-mode.relaxing{color:var(--relax);}
+
+.mode-tabs{display:flex; gap:8px; margin-bottom:16px;}
+.mode-tab{
+    flex:1;
+    background:rgba(255,255,255,0.04);
+    border:1px solid var(--panel-border);
+    color:var(--text-dim);
+    padding:8px;
+    border-radius:8px;
+    font-family:inherit;
+    font-size:0.78em;
+    letter-spacing:0.04em;
+    cursor:pointer;
+    transition:all 0.2s;
+}
+.mode-tab.active{background:rgba(122,208,255,0.16); border-color:#7ad0ff; color:#cfe9ff;}
+.mode-tab:disabled{opacity:0.35; cursor:not-allowed;}
+
+.timer-ring-wrap{
+    position:relative;
+    width:190px;
+    height:190px;
+    margin:4px auto 18px;
+}
+.timer-ring{width:100%; height:100%; transform:rotate(-90deg); transition:transform 0.3s;}
+.timer-ring-wrap.spinning .timer-ring{animation:ring-spin 1.8s linear infinite;}
+@keyframes ring-spin{from{transform:rotate(-90deg);}to{transform:rotate(270deg);}}
+.ring-bg{fill:none; stroke:rgba(255,255,255,0.08); stroke-width:8;}
+.ring-progress{
+    fill:none;
+    stroke-width:8;
+    stroke-linecap:round;
+    transition:stroke-dashoffset 0.4s linear, stroke 0.3s, opacity 0.3s;
+}
+.finish-btn{
+    margin-top:10px;
+    border-color:rgba(255,152,0,0.4) !important;
+    color:#ffb74d !important;
+    background:rgba(255,152,0,0.08) !important;
+}
+.finish-btn:hover{background:rgba(255,152,0,0.16) !important;}
+.finish-btn:disabled{opacity:0.35; cursor:not-allowed;}
+.finish-btn[hidden]{display:none;}
+.timer-display{
+    position:absolute; inset:0;
+    display:flex; align-items:center; justify-content:center;
+    font-size:2.3em; font-weight:600;
+}
+
+.timer-stats{
+    display:flex;
+    justify-content:center;
+    gap:26px;
+    margin-bottom:16px;
+    font-size:0.85em;
+    color:var(--text-dim);
+}
+.stat{display:flex; flex-direction:column; align-items:center; gap:2px;}
+.stat-label{font-size:0.68em; text-transform:uppercase; letter-spacing:0.1em; opacity:0.6;}
+
+.timer-presets{display:flex; gap:8px; justify-content:center; margin-bottom:14px; flex-wrap:wrap;}
+.timer-preset{
+    background:rgba(255,255,255,0.05);
+    border:1px solid var(--panel-border);
+    color:var(--text);
+    padding:7px 12px;
+    border-radius:8px;
+    cursor:pointer;
+    font-family:inherit;
+    font-size:0.85em;
+    transition:all 0.2s;
+}
+.timer-preset.active{background:rgba(122,208,255,0.18); border-color:#7ad0ff; color:#cfe9ff;}
+.timer-preset .preset-sub{display:block; font-size:0.72em; opacity:0.6; margin-top:2px;}
+.timer-custom{
+    margin:0 0 16px;
+    display:flex; align-items:center; justify-content:center; gap:14px;
+    flex-wrap:wrap;
+    font-size:0.9em;
+    color:var(--text-dim);
+}
+.timer-custom label{display:flex; align-items:center; gap:6px;}
+.timer-custom input[type="number"]{
+    width:58px;
+    background:rgba(255,255,255,0.05);
+    border:1px solid var(--panel-border);
+    color:var(--text);
+    padding:5px 8px;
+    border-radius:6px;
+    font-family:inherit;
+    text-align:center;
+    outline:none;
+}
+.timer-custom[hidden]{display:none;}
+.timer-start-btn{
+    width:100%;
+    background:rgba(255,255,255,0.08);
+    border:1px solid rgba(255,255,255,0.3);
+    color:var(--text);
+    padding:11px;
+    border-radius:9px;
+    cursor:pointer;
+    font-family:inherit;
+    font-size:1em;
+    letter-spacing:0.1em;
+    font-weight:700;
+    transition:all 0.2s;
+}
+.timer-start-btn:hover{background:rgba(255,255,255,0.16);}
+.timer-start-btn.pause{border-color:#ff9800; color:#ff9800;}
+
+.wakelock-row{
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    margin-top:14px;
+    font-size:0.78em;
+    color:var(--text-dim);
+}
+.wakelock-row input{accent-color:#7ad0ff; cursor:pointer;}
+.wakelock-row label{cursor:pointer;}
+
+/* ===== HISTORY PANEL ===== */
+.history-panel{
+    position:fixed; top:0; right:0;
+    width:300px; height:100%;
+    background:rgba(8,6,16,0.97);
+    border-left:1px solid var(--panel-border);
+    backdrop-filter:blur(14px);
+    z-index:30;
+    display:none;
+    flex-direction:column;
+    padding:22px;
+    box-shadow:-8px 0 30px rgba(0,0,0,0.55);
+    overflow-y:auto;
+}
+.history-header{
+    display:flex; justify-content:space-between; align-items:center;
+    margin-bottom:18px;
+    letter-spacing:0.1em; font-size:0.85em;
+}
+.history-close{background:none; border:none; color:var(--text); font-size:1.2em; cursor:pointer;}
+.history-actions{display:flex; gap:8px; margin-bottom:16px;}
+.history-actions button{
+    flex:1;
+    background:rgba(255,255,255,0.05);
+    border:1px solid var(--panel-border);
+    color:var(--text-dim);
+    padding:7px;
+    border-radius:6px;
+    font-family:inherit;
+    font-size:0.72em;
+    cursor:pointer;
+}
+.history-actions button:hover{color:var(--text); border-color:rgba(255,255,255,0.3);}
+.history-list{flex:1; display:flex; flex-direction:column; gap:6px;}
+.history-empty{color:var(--text-faint); font-size:0.8em; text-align:center; margin-top:20px;}
+.history-entry{
+    display:flex; justify-content:space-between; align-items:center;
+    font-size:0.8em;
+    padding:7px 9px;
+    border:1px solid rgba(255,255,255,0.08);
+    border-radius:6px;
+}
+.history-entry.work{border-left:3px solid var(--work);}
+.history-entry.relax{border-left:3px solid var(--relax);}
+.history-time{opacity:0.65;}
+.history-duration{font-weight:700;}
+
+/* ===== ZEN MODE ===== */
+.zen-ring-slot{
+    position:fixed;
+    inset:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    pointer-events:none;
+    z-index:15;
+}
+.zen-ring-slot .timer-ring-wrap{pointer-events:auto;}
+#ring-wrap{transition:transform 0.6s ease;}
+body.zen:not(.zen-revealed) #ring-wrap{transform:scale(1.25);}
+.zen-hide{transition:opacity 0.6s ease, transform 0.6s ease;}
+body.zen .zen-hide{opacity:0; pointer-events:none; transform:translateY(8px);}
+body.zen.zen-revealed .zen-hide{opacity:1; pointer-events:auto; transform:none;}
+.zen-exit-hint{
+    position:fixed;
+    bottom:24px; left:50%;
+    transform:translateX(-50%);
+    font-size:0.72em;
+    color:var(--text-faint);
+    letter-spacing:0.05em;
+    opacity:0;
+    transition:opacity 0.6s ease;
+    pointer-events:none;
+    z-index:16;
+}
+body.zen:not(.zen-revealed) .zen-exit-hint{opacity:1;}
+</style>
+</head>
+<body>
+<div class="aurora" aria-hidden="true"><span></span><span></span><span></span></div>
+<div class="zen-ring-slot" id="zen-ring-slot"></div>
+<div class="zen-exit-hint">клик по фону — показать управление</div>
+<div class="app">
+    <div class="topbar zen-hide">
+        <div class="brand">NEURAL<span>MUSIC</span></div>
+        <button class="icon-btn" id="history-btn-fixed">История ▸</button>
+    </div>
+
+    <div class="layout">
+        <div class="focus-col zen-hide">
+            <div class="focus-ring-wrap">
+                <button class="standby-btn" id="standby-btn">FOCUS</button>
+            </div>
+            <div class="hint">клик или пробел — старт/стоп</div>
+            <div class="presets-row" id="ambient-presets">
+                <button class="preset-chip" data-preset="deep">Deep Focus</button>
+                <button class="preset-chip" data-preset="rain">Rain</button>
+                <button class="preset-chip" data-preset="storm">Storm</button>
+                <button class="preset-chip" data-preset="minimal">Minimal</button>
+            </div>
+        </div>
+
+        <div class="right-col" style="display:flex; flex-direction:column; gap:28px;">
+            <div class="card mixer zen-hide">
+                <h2>MIXER</h2>
+                <div class="slider-group" style="--accent:var(--accent-music); --fill:60%">
+                    <span class="slider-label">MUSIC</span>
+                    <input type="range" id="music-slider" min="0" max="100" value="60">
+                    <span class="slider-value" id="music-value">60%</span>
+                </div>
+                <div class="slider-group" style="--accent:var(--accent-drone); --fill:20%">
+                    <span class="slider-label">DRONE</span>
+                    <input type="range" id="drone-slider" min="0" max="100" value="20">
+                    <span class="slider-value" id="drone-value">20%</span>
+                </div>
+                <div class="slider-group" style="--accent:var(--accent-haze); --fill:5%">
+                    <span class="slider-label">HAZE</span>
+                    <input type="range" id="haze-slider" min="0" max="100" value="5">
+                    <span class="slider-value" id="haze-value">5%</span>
+                </div>
+                <div class="slider-group" style="--accent:var(--accent-pulse); --fill:15%">
+                    <span class="slider-label">PULSE</span>
+                    <input type="range" id="pulse-slider" min="0" max="100" value="15">
+                    <span class="slider-value" id="pulse-value">15%</span>
+                </div>
+                <div class="slider-group" style="--accent:var(--accent-noise); --fill:20%">
+                    <span class="slider-label">NOISE</span>
+                    <input type="range" id="noise-slider" min="0" max="100" value="20">
+                    <span class="slider-value" id="noise-value">20%</span>
+                </div>
+            </div>
+
+            <div class="card timer-block zen-hide">
+                <div class="timer-header">
+                    <span>TIMER</span>
+                    <button id="timer-mode-btn" class="timer-mode working">⇆ Working</button>
+                </div>
+
+                <div class="mode-tabs" id="mode-tabs">
+                    <button class="mode-tab active" data-type="timer">Таймер</button>
+                    <button class="mode-tab" data-type="stopwatch">Секундомер</button>
+                </div>
+
+                <div class="timer-ring-wrap" id="ring-wrap">
+                    <svg class="timer-ring" viewBox="0 0 200 200">
+                        <circle class="ring-bg" cx="100" cy="100" r="90"/>
+                        <circle class="ring-progress" id="ring-progress" cx="100" cy="100" r="90"/>
+                    </svg>
+                    <div class="timer-display" id="timer-display">50:00</div>
+                </div>
+
+                <div class="timer-stats" id="timer-stats">
+                    <div class="stat"><span class="stat-label">Work</span><span id="work-stat">00:00</span></div>
+                    <div class="stat"><span class="stat-label">Relax</span><span id="relax-stat">00:00</span></div>
+                </div>
+                <script>
+                (function(){
+                    try{
+                        var saved = localStorage.getItem('neuralmusic_v2_daily');
+                        if (!saved) return;
+                        var data = JSON.parse(saved);
+                        var today = new Date().toISOString().split('T')[0];
+                        if (data.date !== today) return;
+                        var fmt = function(s){ s = s || 0; return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'); };
+                        document.getElementById('work-stat').textContent = fmt(data.totalWorkSeconds);
+                        document.getElementById('relax-stat').textContent = fmt(data.totalRelaxSeconds);
+                    }catch(e){}
+                })();
+                </script>
+
+                <div id="timer-config">
+                    <div class="timer-presets" id="pomodoro-presets">
+                        <button class="timer-preset" data-preset="classic" data-work="25" data-relax="5">Pomodoro<span class="preset-sub">25 / 5</span></button>
+                        <button class="timer-preset active" data-preset="extended" data-work="50" data-relax="10">Extended<span class="preset-sub">50 / 10</span></button>
+                        <button class="timer-preset" data-preset="deep" data-work="90" data-relax="20">Deep<span class="preset-sub">90 / 20</span></button>
+                        <button class="timer-preset" data-preset="custom">Custom</button>
+                    </div>
+                    <div class="timer-custom" id="custom-duration-row" hidden>
+                        <label for="work-minutes-input">Work <input type="number" id="work-minutes-input" min="1" max="240" value="50" step="1"> мин</label>
+                        <label for="relax-minutes-input">Relax <input type="number" id="relax-minutes-input" min="1" max="120" value="10" step="1"> мин</label>
+                    </div>
+                </div>
+
+                <button class="timer-start-btn" id="timer-start-btn">Start</button>
+                <button class="timer-start-btn finish-btn" id="finish-stopwatch-btn" hidden disabled>Завершить сессию</button>
+
+                <div class="wakelock-row">
+                    <input type="checkbox" id="wakelock-checkbox">
+                    <label for="wakelock-checkbox">не гасить экран во время сессии</label>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="vendor/tone.js"></script>
+
+<div class="history-panel" id="history-panel">
+    <div class="history-header">
+        <span>SESSION HISTORY</span>
+        <button class="history-close" id="history-close">✕</button>
+    </div>
+    <div class="history-actions">
+        <button id="history-export-btn">⭳ Экспорт JSON</button>
+        <button id="history-clear-btn">↺ Сбросить статистику</button>
+    </div>
+    <div class="history-list" id="history-list"></div>
+</div>
+
+<script>
+Tone.setContext(new Tone.Context({ latencyHint: "playback" }));
+
+let isActive = false;
+let sourcesStarted = false;
+const standbyBtn = document.getElementById('standby-btn');
+
+const masterLimiter = new Tone.Limiter(-1).toDestination();
+const masterGain = new Tone.Gain(0).connect(masterLimiter);
+const timerReverb = new Tone.Reverb(2.5).toDestination();
+
+const droneFilter = new Tone.Filter(200, "lowpass").connect(masterGain);
+const droneVibrato = new Tone.Vibrato({ frequency: 0.12, depth: 0.04 }).connect(droneFilter);
+const droneOsc = new Tone.Oscillator(55, "sawtooth").connect(droneVibrato);
+droneOsc.volume.value = -Infinity;
+
+const noiseFilter = new Tone.Filter(600, "lowpass").connect(masterGain);
+const noiseGen = new Tone.Noise("pink").connect(noiseFilter);
+noiseGen.volume.value = -Infinity;
+const noiseLfo = new Tone.LFO(0.08, 400, 800).connect(noiseFilter.frequency);
+
+const hazePanner = new Tone.AutoPanner({ frequency: 0.045, depth: 0.7 }).connect(masterGain).start();
+const hazeFilter = new Tone.Filter(800, "bandpass").connect(hazePanner);
+hazeFilter.Q.value = 0.8;
+const hazeGen = new Tone.Noise("pink").connect(hazeFilter);
+hazeGen.volume.value = -Infinity;
+const hazeLfo = new Tone.LFO(0.06, 600, 1000).connect(hazeFilter.frequency);
+
+const pulseSynth = new Tone.MembraneSynth({
+    pitchDecay: 0.03,
+    octaves: 5,
+    oscillator: { type: "sine" },
+    envelope: { attack: 0.001, decay: 0.5, sustain: 0 }
+}).connect(masterGain);
+pulseSynth.volume.value = -Infinity;
+let pulseTimeout = null;
+
+function percentToDb(percent){
+    if (percent <= 0) return -Infinity;
+    return Math.round(20 * Math.log10(percent / 100));
+}
+
+const STORAGE_KEY = 'neuralmusic_v2_daily';
+localStorage.removeItem('neuralmusic_v2_settings');
+
+function bindSlider(sliderId, displayId, setter){
+    const slider = document.getElementById(sliderId);
+    const display = document.getElementById(displayId);
+    const update = () => {
+        const raw = parseInt(slider.value);
+        display.textContent = raw + '%';
+        slider.style.setProperty('--fill', raw + '%');
+        setter(raw);
+    };
+    slider.addEventListener('input', update);
+    update();
+}
+
+const musicSlider = document.getElementById('music-slider');
+const droneSlider = document.getElementById('drone-slider');
+const noiseSlider = document.getElementById('noise-slider');
+const hazeSlider = document.getElementById('haze-slider');
+const pulseSlider = document.getElementById('pulse-slider');
+
+bindSlider('music-slider', 'music-value', (raw) => {
+    if (isActive) masterGain.gain.rampTo(raw / 100, 0.1);
+});
+bindSlider('drone-slider', 'drone-value', (raw) => { droneOsc.volume.value = percentToDb(raw); });
+bindSlider('noise-slider', 'noise-value', (raw) => { noiseGen.volume.value = percentToDb(raw); });
+bindSlider('haze-slider', 'haze-value', (raw) => { hazeGen.volume.value = percentToDb(raw); });
+bindSlider('pulse-slider', 'pulse-value', (raw) => { pulseSynth.volume.value = percentToDb(raw); });
+
+function startAllSourcesOnce(){
+    droneOsc.start();
+    noiseGen.start();
+    hazeGen.start();
+    noiseLfo.start();
+    hazeLfo.start();
+}
+
+function startPulseLoop(){
+    function beat(){
+        if (!isActive){
+            pulseTimeout = setTimeout(beat, 500);
+            return;
+        }
+        pulseSynth.triggerAttackRelease("C1", "8n");
+        const cycle = 1850 + Math.random() * 300;
+        pulseTimeout = setTimeout(beat, cycle);
+    }
+    beat();
+}
+
+async function ensureStarted(){
+    if (sourcesStarted) return;
+    await Tone.start();
+    startAllSourcesOnce();
+    startPulseLoop();
+    sourcesStarted = true;
+}
+
+function setActive(active){
+    isActive = active;
+    const target = active ? parseInt(musicSlider.value) / 100 : 0;
+    masterGain.gain.rampTo(target, 0.5);
+    standbyBtn.textContent = active ? 'ON' : 'FOCUS';
+    standbyBtn.classList.toggle('active', active);
+    document.body.classList.toggle('focus-active', active);
+    setBackgroundAudioActive(active);
+}
+
+function setBackgroundAudioActive(active){
+    if (!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform())) return;
+    const plugin = window.Capacitor.Plugins && window.Capacitor.Plugins.BackgroundAudio;
+    if (!plugin) return;
+    (active ? plugin.start() : plugin.stop()).catch(() => {});
+}
+
+standbyBtn.addEventListener('click', async () => {
+    await ensureStarted();
+    setActive(!isActive);
+});
+
+document.addEventListener('keydown', (e) => {
+    if (e.code !== 'Space') return;
+    const tag = document.activeElement.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || document.activeElement === standbyBtn) return;
+    e.preventDefault();
+    standbyBtn.click();
+});
+
+document.addEventListener('click', (e) => {
+    if (!document.body.classList.contains('zen')) return;
+    if (e.target.closest('button, input, label, a')) return;
+    document.body.classList.toggle('zen-revealed');
+    syncZenRingPosition();
+});
+
+const AMBIENT_PRESETS = {
+    deep:    { music: 70, drone: 55, noise: 10, haze: 5,  pulse: 20 },
+    rain:    { music: 65, drone: 10, noise: 45, haze: 60, pulse: 0  },
+    storm:   { music: 75, drone: 40, noise: 70, haze: 30, pulse: 20 },
+    minimal: { music: 50, drone: 15, noise: 10, haze: 5,  pulse: 0  }
+};
+document.getElementById('ambient-presets').addEventListener('click', (e) => {
+    const btn = e.target.closest('.preset-chip');
+    if (!btn) return;
+    const preset = AMBIENT_PRESETS[btn.dataset.preset];
+    if (!preset) return;
+    Object.entries(preset).forEach(([ch, val]) => {
+        const slider = document.getElementById(`${ch}-slider`);
+        slider.value = val;
+        slider.dispatchEvent(new Event('input'));
+    });
+});
+
+/* ===== TIMER / STOPWATCH ===== */
+const timerDisplay = document.getElementById('timer-display');
+const timerModeBtn = document.getElementById('timer-mode-btn');
+const startBtn = document.getElementById('timer-start-btn');
+const finishBtn = document.getElementById('finish-stopwatch-btn');
+const ringWrap = document.getElementById('ring-wrap');
+const ringProgress = document.getElementById('ring-progress');
+const wakeLockCheckbox = document.getElementById('wakelock-checkbox');
+const timerConfig = document.getElementById('timer-config');
+const modeTabs = document.querySelectorAll('.mode-tab');
+const zenRingSlot = document.getElementById('zen-ring-slot');
+
+const RING_CIRCUMFERENCE = 2 * Math.PI * 90;
+ringProgress.style.strokeDasharray = RING_CIRCUMFERENCE;
+
+const ringHomeParent = ringWrap.parentNode;
+const ringHomeNext = ringWrap.nextElementSibling;
+function enterZenFloat(){ zenRingSlot.appendChild(ringWrap); }
+function exitZenFloat(){ ringHomeParent.insertBefore(ringWrap, ringHomeNext); }
+function syncZenRingPosition(){
+    const zen = document.body.classList.contains('zen');
+    const revealed = document.body.classList.contains('zen-revealed');
+    if (zen && !revealed) enterZenFloat();
+    else exitZenFloat();
+}
+function updateZenState(){
+    const shouldBeZen = isTimerRunning || isStopwatchRunning;
+    document.body.classList.toggle('zen', shouldBeZen);
+    if (!shouldBeZen) document.body.classList.remove('zen-revealed');
+    syncZenRingPosition();
+}
+
+let timerType = 'timer';
+let workMinutes = 50;
+let relaxMinutes = 10;
+let activePreset = 'extended';
+let remainingSeconds = workMinutes * 60;
+let timerInterval = null;
+let isTimerRunning = false;
+let timerAnchorTime = null;
+let timerAnchorRemaining = 0;
+let stopwatchSeconds = 0;
+let stopwatchInterval = null;
+let isStopwatchRunning = false;
+let stopwatchAnchorTime = null;
+let stopwatchAnchorElapsed = 0;
+let statsAnchorTime = null;
+let currentMode = 'working';
+let sessionHistory = [];
+let totalWorkSeconds = 0;
+let totalRelaxSeconds = 0;
+let wakeLock = null;
+
+function currentModeMinutes(){
+    return currentMode === 'working' ? workMinutes : relaxMinutes;
+}
+let secondsSinceLastSave = 0;
+function creditStats(deltaSeconds){
+    if (deltaSeconds <= 0) return;
+    if (currentMode === 'working') totalWorkSeconds += deltaSeconds;
+    else totalRelaxSeconds += deltaSeconds;
+    updateStatsDisplay();
+    secondsSinceLastSave += deltaSeconds;
+    if (secondsSinceLastSave >= 10){
+        saveDailyData();
+        secondsSinceLastSave = 0;
+    }
+}
+
+async function acquireWakeLock(){
+    if (!('wakeLock' in navigator) || !wakeLockCheckbox.checked) return;
+    try{ wakeLock = await navigator.wakeLock.request('screen'); }catch(e){}
+}
+function releaseWakeLock(){
+    if (wakeLock){ wakeLock.release().catch(() => {}); wakeLock = null; }
+}
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && (isTimerRunning || isStopwatchRunning)) acquireWakeLock();
+});
+wakeLockCheckbox.addEventListener('change', () => {
+    if (wakeLockCheckbox.checked && (isTimerRunning || isStopwatchRunning)) acquireWakeLock();
+    else releaseWakeLock();
+});
+
+function saveDailyData(){
+    const data = {
+        date: new Date().toISOString().split('T')[0],
+        totalWorkSeconds, totalRelaxSeconds, sessionHistory
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+function loadDailyData(){
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (!saved) return;
+    try{
+        const data = JSON.parse(saved);
+        const today = new Date().toISOString().split('T')[0];
+        if (data.date === today){
+            totalWorkSeconds = data.totalWorkSeconds || 0;
+            totalRelaxSeconds = data.totalRelaxSeconds || 0;
+            sessionHistory = data.sessionHistory || [];
+            updateStatsDisplay();
+            renderHistory();
+        } else {
+            localStorage.removeItem(STORAGE_KEY);
+        }
+    }catch(e){
+        localStorage.removeItem(STORAGE_KEY);
+    }
+}
+loadDailyData();
+
+function updateStatsDisplay(){
+    document.getElementById('work-stat').textContent =
+        `${Math.floor(totalWorkSeconds / 60).toString().padStart(2, '0')}:${(totalWorkSeconds % 60).toString().padStart(2, '0')}`;
+    document.getElementById('relax-stat').textContent =
+        `${Math.floor(totalRelaxSeconds / 60).toString().padStart(2, '0')}:${(totalRelaxSeconds % 60).toString().padStart(2, '0')}`;
+}
+
+function playWorkEndChime(){
+    const now = Tone.now();
+    const synth = new Tone.FMSynth({
+        harmonicity: 3.0, modulationIndex: 5,
+        oscillator: { type: "sine" },
+        envelope: { attack: 0.001, decay: 0.8, sustain: 0, release: 0.1 },
+        modulation: { type: "sine" },
+        modulationEnvelope: { attack: 0.001, decay: 0.3, sustain: 0, release: 0.1 }
+    }).connect(timerReverb);
+    synth.triggerAttackRelease("E5", "16n", now);
+    synth.triggerAttackRelease("C5", "16n", now + 0.15);
+    setTimeout(() => synth.dispose(), 1500);
+}
+function playRelaxEndChime(){
+    const now = Tone.now();
+    const filter = new Tone.Filter(300, "lowpass");
+    const synth = new Tone.Synth({
+        oscillator: { type: "sawtooth" },
+        envelope: { attack: 0.02, decay: 0.4, sustain: 0.1, release: 1.2 }
+    }).connect(filter);
+    filter.connect(timerReverb);
+    synth.triggerAttackRelease("G3", "4n", now);
+    setTimeout(() => { synth.dispose(); filter.dispose(); }, 2000);
+}
+
+function updateTimerDisplay(){
+    const clamped = Math.max(0, remainingSeconds);
+    const mins = Math.floor(clamped / 60).toString().padStart(2, '0');
+    const secs = (clamped % 60).toString().padStart(2, '0');
+    timerDisplay.textContent = `${mins}:${secs}`;
+    const total = currentModeMinutes() * 60;
+    const progress = total > 0 ? clamped / total : 0;
+    ringProgress.style.opacity = 1;
+    ringProgress.style.strokeDasharray = RING_CIRCUMFERENCE;
+    ringProgress.style.strokeDashoffset = RING_CIRCUMFERENCE * (1 - progress);
+    ringProgress.style.stroke = currentMode === 'working' ? 'var(--work)' : 'var(--relax)';
+}
+
+function updateStopwatchDisplay(){
+    const mins = Math.floor(stopwatchSeconds / 60).toString().padStart(2, '0');
+    const secs = (stopwatchSeconds % 60).toString().padStart(2, '0');
+    timerDisplay.textContent = `${mins}:${secs}`;
+    ringProgress.style.stroke = currentMode === 'working' ? 'var(--work)' : 'var(--relax)';
+    if (isStopwatchRunning){
+        ringWrap.classList.add('spinning');
+        ringProgress.style.opacity = 1;
+        ringProgress.style.strokeDasharray = `${RING_CIRCUMFERENCE * 0.28} ${RING_CIRCUMFERENCE}`;
+        ringProgress.style.strokeDashoffset = 0;
+    } else {
+        ringWrap.classList.remove('spinning');
+        ringProgress.style.opacity = stopwatchSeconds > 0 ? 0.5 : 0;
+        ringProgress.style.strokeDasharray = RING_CIRCUMFERENCE;
+        ringProgress.style.strokeDashoffset = 0;
+    }
+    finishBtn.disabled = stopwatchSeconds <= 0;
+}
+
+function setTabsDisabled(disabled){
+    modeTabs.forEach(t => { t.disabled = disabled; });
+}
+
+function switchTimerType(type){
+    timerType = type;
+    modeTabs.forEach(t => t.classList.toggle('active', t.dataset.type === type));
+    timerConfig.style.display = type === 'timer' ? '' : 'none';
+    finishBtn.hidden = type !== 'stopwatch';
+    startBtn.hidden = false;
+    ringWrap.classList.remove('spinning');
+    if (type === 'timer') updateTimerDisplay();
+    else updateStopwatchDisplay();
+}
+modeTabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+        if (tab.disabled || tab.dataset.type === timerType) return;
+        switchTimerType(tab.dataset.type);
+    });
+});
+
+function addHistoryEntry(mode, durationSec){
+    sessionHistory.push({
+        mode, durationSec,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    });
+    renderHistory();
+}
+
+function renderHistory(){
+    const list = document.getElementById('history-list');
+    if (!list) return;
+    list.innerHTML = '';
+    if (sessionHistory.length === 0){
+        list.innerHTML = '<div class="history-empty">Пока пусто</div>';
+        return;
+    }
+    [...sessionHistory].reverse().forEach(entry => {
+        const div = document.createElement('div');
+        div.className = `history-entry ${entry.mode === 'working' ? 'work' : 'relax'}`;
+        const mins = Math.floor(entry.durationSec / 60);
+        const secs = entry.durationSec % 60;
+        const durStr = mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
+        div.innerHTML = `<span class="history-time">${entry.timestamp}</span>
+                         <span class="history-mode">${entry.mode === 'working' ? 'Work' : 'Relax'}</span>
+                         <span class="history-duration">${durStr}</span>`;
+        list.appendChild(div);
+    });
+}
+
+function setMode(mode, resetRemaining = true){
+    currentMode = mode;
+    timerModeBtn.textContent = mode === 'working' ? '⇆ Working' : '⇆ Relaxing';
+    timerModeBtn.className = `timer-mode ${mode}`;
+    if (timerType === 'timer'){
+        if (resetRemaining) remainingSeconds = currentModeMinutes() * 60;
+        if (isTimerRunning){
+            timerAnchorTime = Date.now();
+            timerAnchorRemaining = remainingSeconds;
+        }
+        updateTimerDisplay();
+    } else {
+        updateStopwatchDisplay();
+    }
+}
+
+function resetTimer(keepMode = false){
+    if (timerInterval){ clearInterval(timerInterval); timerInterval = null; }
+    isTimerRunning = false;
+    startBtn.textContent = 'Start';
+    startBtn.classList.remove('pause');
+    setTabsDisabled(false);
+    remainingSeconds = currentModeMinutes() * 60;
+    updateTimerDisplay();
+    releaseWakeLock();
+    if (!keepMode) setMode('working');
+}
+
+const pomodoroPresetBtns = document.querySelectorAll('#pomodoro-presets .timer-preset');
+const customDurationRow = document.getElementById('custom-duration-row');
+const workMinutesInput = document.getElementById('work-minutes-input');
+const relaxMinutesInput = document.getElementById('relax-minutes-input');
+
+function applyDurations(work, relax){
+    workMinutes = work;
+    relaxMinutes = relax;
+    workMinutesInput.value = work;
+    relaxMinutesInput.value = relax;
+    resetTimer(true);
+}
+
+function setActivePreset(preset){
+    activePreset = preset;
+    pomodoroPresetBtns.forEach(b => b.classList.toggle('active', b.dataset.preset === preset));
+    customDurationRow.hidden = preset !== 'custom';
+}
+
+pomodoroPresetBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+        setActivePreset(btn.dataset.preset);
+        if (btn.dataset.preset === 'custom'){
+            applyDurations(parseInt(workMinutesInput.value) || workMinutes, parseInt(relaxMinutesInput.value) || relaxMinutes);
+        } else {
+            applyDurations(parseInt(btn.dataset.work), parseInt(btn.dataset.relax));
+        }
+    });
+});
+
+workMinutesInput.addEventListener('input', () => {
+    const val = parseInt(workMinutesInput.value);
+    if (!isNaN(val) && val > 0) applyDurations(val, relaxMinutes);
+});
+relaxMinutesInput.addEventListener('input', () => {
+    const val = parseInt(relaxMinutesInput.value);
+    if (!isNaN(val) && val > 0) applyDurations(workMinutes, val);
+});
+
+function finishTimerSegment(){
+    clearInterval(timerInterval);
+    timerInterval = null;
+    isTimerRunning = false;
+    startBtn.textContent = 'Start';
+    startBtn.classList.remove('pause');
+    setTabsDisabled(false);
+    releaseWakeLock();
+    updateZenState();
+
+    const finishedMode = currentMode;
+    if (finishedMode === 'working') playWorkEndChime();
+    else playRelaxEndChime();
+    addHistoryEntry(finishedMode, currentModeMinutes() * 60);
+    saveDailyData();
+
+    setMode(finishedMode === 'working' ? 'relaxing' : 'working');
+}
+
+function timerTick(){
+    const now = Date.now();
+    const elapsedSinceAnchor = Math.floor((now - timerAnchorTime) / 1000);
+    const cappedElapsed = Math.min(elapsedSinceAnchor, timerAnchorRemaining);
+    remainingSeconds = timerAnchorRemaining - cappedElapsed;
+
+    const statsElapsed = Math.floor((now - statsAnchorTime) / 1000);
+    if (statsElapsed > 0){
+        creditStats(statsElapsed);
+        statsAnchorTime += statsElapsed * 1000;
+    }
+    updateTimerDisplay();
+
+    if (elapsedSinceAnchor >= timerAnchorRemaining) finishTimerSegment();
+}
+
+function toggleTimerStartPause(){
+    if (isTimerRunning){
+        clearInterval(timerInterval);
+        timerInterval = null;
+        isTimerRunning = false;
+        startBtn.textContent = 'Start';
+        startBtn.classList.remove('pause');
+        setTabsDisabled(false);
+        releaseWakeLock();
+        updateZenState();
+        saveDailyData();
+    } else {
+        if (remainingSeconds <= 0) remainingSeconds = currentModeMinutes() * 60;
+        isTimerRunning = true;
+        timerAnchorTime = Date.now();
+        timerAnchorRemaining = remainingSeconds;
+        statsAnchorTime = Date.now();
+        startBtn.textContent = 'Pause';
+        startBtn.classList.add('pause');
+        setTabsDisabled(true);
+        acquireWakeLock();
+        updateTimerDisplay();
+        updateZenState();
+        timerInterval = setInterval(timerTick, 1000);
+    }
+}
+
+function stopwatchTick(){
+    const now = Date.now();
+    const elapsed = Math.floor((now - stopwatchAnchorTime) / 1000);
+    stopwatchSeconds = stopwatchAnchorElapsed + elapsed;
+
+    const statsElapsed = Math.floor((now - statsAnchorTime) / 1000);
+    if (statsElapsed > 0){
+        creditStats(statsElapsed);
+        statsAnchorTime += statsElapsed * 1000;
+    }
+    updateStopwatchDisplay();
+}
+
+function toggleStopwatchStartPause(){
+    if (isStopwatchRunning){
+        clearInterval(stopwatchInterval);
+        stopwatchInterval = null;
+        isStopwatchRunning = false;
+        startBtn.textContent = 'Start';
+        startBtn.classList.remove('pause');
+        setTabsDisabled(false);
+        releaseWakeLock();
+        updateStopwatchDisplay();
+        updateZenState();
+        saveDailyData();
+    } else {
+        isStopwatchRunning = true;
+        stopwatchAnchorTime = Date.now();
+        stopwatchAnchorElapsed = stopwatchSeconds;
+        statsAnchorTime = Date.now();
+        startBtn.textContent = 'Pause';
+        startBtn.classList.add('pause');
+        setTabsDisabled(true);
+        acquireWakeLock();
+        updateStopwatchDisplay();
+        updateZenState();
+        stopwatchInterval = setInterval(stopwatchTick, 1000);
+    }
+}
+
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible') return;
+    if (isTimerRunning) timerTick();
+    else if (isStopwatchRunning) stopwatchTick();
+});
+
+startBtn.addEventListener('click', async () => {
+    const isStarting = timerType === 'timer' ? !isTimerRunning : !isStopwatchRunning;
+    if (isStarting){
+        await ensureStarted();
+        if (!isActive) setActive(true);
+    } else if (isActive){
+        setActive(false);
+    }
+    if (timerType === 'timer') toggleTimerStartPause();
+    else toggleStopwatchStartPause();
+});
+
+finishBtn.addEventListener('click', () => {
+    if (stopwatchSeconds <= 0) return;
+    if (isStopwatchRunning){
+        clearInterval(stopwatchInterval);
+        stopwatchInterval = null;
+        isStopwatchRunning = false;
+        startBtn.textContent = 'Start';
+        startBtn.classList.remove('pause');
+        setTabsDisabled(false);
+        releaseWakeLock();
+        updateZenState();
+    }
+    if (currentMode === 'working') playWorkEndChime();
+    else playRelaxEndChime();
+    addHistoryEntry(currentMode, stopwatchSeconds);
+    saveDailyData();
+    stopwatchSeconds = 0;
+    updateStopwatchDisplay();
+});
+
+timerModeBtn.addEventListener('click', () => {
+    setMode(currentMode === 'working' ? 'relaxing' : 'working');
+});
+
+workMinutesInput.value = workMinutes;
+relaxMinutesInput.value = relaxMinutes;
+setActivePreset(activePreset);
+
+timerModeBtn.textContent = currentMode === 'working' ? '⇆ Working' : '⇆ Relaxing';
+timerModeBtn.className = `timer-mode ${currentMode}`;
+remainingSeconds = currentModeMinutes() * 60;
+switchTimerType(timerType);
+
+const historyBtnFixed = document.getElementById('history-btn-fixed');
+const historyPanel = document.getElementById('history-panel');
+const historyClose = document.getElementById('history-close');
+
+historyBtnFixed.addEventListener('click', () => { historyPanel.style.display = 'flex'; });
+historyClose.addEventListener('click', () => { historyPanel.style.display = 'none'; });
+
+document.getElementById('history-clear-btn').addEventListener('click', () => {
+    if (!confirm('Сбросить дневную статистику и историю сессий?')) return;
+    totalWorkSeconds = 0;
+    totalRelaxSeconds = 0;
+    sessionHistory = [];
+    updateStatsDisplay();
+    renderHistory();
+    saveDailyData();
+});
+document.getElementById('history-export-btn').addEventListener('click', () => {
+    const data = { exportedAt: new Date().toISOString(), totalWorkSeconds, totalRelaxSeconds, sessionHistory };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `neuralmusic-history-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+});
+</script>
+</body>
+</html>
